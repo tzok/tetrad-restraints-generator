@@ -43,10 +43,14 @@ def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
             with json_file.open("r", encoding="utf-8") as fp:
                 data = json.load(fp)
 
-            # keep only files that have at least one helix
-            # whose ``quadruplexes`` list is not empty
+            # keep only files that have at least one helix whose
+            # ``quadruplexes`` field is a non-empty list
             helices = data.get("helices", [])
-            if any(helix.get("quadruplexes") for helix in helices):
+            if any(
+                isinstance(helix.get("quadruplexes"), list)
+                and len(helix["quadruplexes"]) > 0
+                for helix in helices
+            ):
                 json_map[json_file.name] = data
         except json.JSONDecodeError as exc:
             # In a full implementation you might want to log or collect errors.
