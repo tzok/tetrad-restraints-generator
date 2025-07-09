@@ -489,10 +489,9 @@ def main() -> None:
         x_deg = np.linspace(
             np.degrees(min(all_tors_n9)), np.degrees(max(all_tors_n9)), 360
         )
-        pdf = (
-            stats.vonmises.pdf(np.radians(x_deg), params["kappa"], loc=params["loc"])
-            * (np.pi / 180)
-        )
+        pdf = stats.vonmises.pdf(
+            np.radians(x_deg), params["kappa"], loc=params["loc"]
+        ) * (np.pi / 180)
         plt.plot(x_deg, pdf, "k--", lw=2)
 
     if all_tors_o6:
@@ -511,10 +510,9 @@ def main() -> None:
         x_deg = np.linspace(
             np.degrees(min(all_tors_o6)), np.degrees(max(all_tors_o6)), 360
         )
-        pdf = (
-            stats.vonmises.pdf(np.radians(x_deg), params["kappa"], loc=params["loc"])
-            * (np.pi / 180)
-        )
+        pdf = stats.vonmises.pdf(
+            np.radians(x_deg), params["kappa"], loc=params["loc"]
+        ) * (np.pi / 180)
         plt.plot(x_deg, pdf, "k--", lw=2)
 
     if any((all_n1_o6, all_n2_n7, all_tors_n9, all_tors_o6)):
