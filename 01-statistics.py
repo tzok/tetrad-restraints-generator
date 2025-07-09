@@ -45,9 +45,29 @@ def extract_g_tetrads(
     data: Dict[str, Any], nucleotide_map: Dict[str, Dict[str, Any]]
 ) -> list[Dict[str, Any]]:
     """
-    Extract tetrads whose four nucleotides are all guanines
-    (i.e. every nucleotide referenced by ``nt1``‒``nt4`` has
-    ``shortName`` == "G").
+    Extract tetrads that satisfy two criteria:
+
+    1. Every nucleotide referenced by ``nt1``‒``nt4`` is a guanine
+       (``shortName`` == ``"G"``).
+    2. For every unordered pair of nucleotides inside the tetrad there exists
+       a record in the global ``basePairs`` list whose ``lw`` annotation is
+       either ``"cWH"`` or ``"cHW"``:
+
+       • If ``lw == "cWH"`` we collect the pair exactly as stored  
+         ``(base_pair["nt1"], base_pair["nt2"])``.  
+       • If ``lw == "cHW"`` we collect the reversed order  
+         ``(base_pair["nt2"], base_pair["nt1"])``.
+
+       Should any pair be missing or use another ``lw`` annotation the whole
+       tetrad is discarded.
+
+    Returns
+    -------
+    list[Dict[str, Any]]
+        Each item is a dictionary with two keys:
+
+        - ``"tetrad"`` – the original tetrad object
+        - ``"pairs"``  – list with the six collected nucleotide pairs
 
     Parameters
     ----------
@@ -62,17 +82,55 @@ def extract_g_tetrads(
         List of tetrad dictionaries that satisfy the condition.
     """
     g_tetrads: list[Dict[str, Any]] = []
+
+    # Index basePairs for quick look-up
+    base_pair_lookup = {
+        (bp.get("nt1"), bp.get("nt2")): bp for bp in data.get("basePairs", [])
+    }
+
     for helix in data.get("helices", []):
         for quad in helix.get("quadruplexes", []):
             for tetrad in quad.get("tetrads", []):
                 nts = [tetrad.get(f"nt{i}") for i in range(1, 5)]
-                if all(
+
+                # --- condition 1: every nucleotide is a guanine ----------------
+                if not all(
                     isinstance(nt, str)
                     and nt in nucleotide_map
                     and nucleotide_map[nt].get("shortName") == "G"
                     for nt in nts
                 ):
-                    g_tetrads.append(tetrad)
+                    continue
+
+                # --- condition 2: validate all six base-pairs ------------------
+                collected_pairs: list[tuple[str, str]] = []
+                valid = True
+                for i in range(4):
+                    for j in range(i + 1, 4):
+                        a, b = nts[i], nts[j]
+
+                        bp = base_pair_lookup.get((a, b))
+                        if bp is None:
+                            bp = base_pair_lookup.get((b, a))
+
+                        if bp is None:
+                            valid = False
+                            break
+
+                        lw = bp.get("lw")
+                        if lw == "cWH":
+                            collected_pairs.append((bp["nt1"], bp["nt2"]))
+                        elif lw == "cHW":
+                            collected_pairs.append((bp["nt2"], bp["nt1"]))
+                        else:
+                            valid = False
+                            break
+                    if not valid:
+                        break
+
+                if valid and len(collected_pairs) == 6:
+                    g_tetrads.append({"tetrad": tetrad, "pairs": collected_pairs})
+
     return g_tetrads
 
 
@@ -89,7 +147,8 @@ def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
     - ``"data"`` – the raw JSON loaded from disk
     - ``"nucleotide_map"`` – ``Dict[str, Dict[str, Any]]`` created from the
       nucleotide list
-    - ``"g_tetrads"`` – ``List[Dict[str, Any]]`` where every nucleotide is a G
+    - ``"g_tetrads"`` – ``List[Dict[str, Any]]`` where each entry contains a
+      G-tetrad and its collected base-pairs
 
     Parameters
     ----------
