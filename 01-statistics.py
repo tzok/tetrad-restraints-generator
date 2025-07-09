@@ -14,8 +14,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import gzip
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List, Set
+
+from rnapolis.parser_v2 import parse_cif_atoms
+from rnapolis.tertiary_v2 import Structure, Residue
 
 
 def build_nucleotide_map(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -190,21 +194,75 @@ def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
     return json_map
 
 
+def collect_tetrad_residues(
+    cif_path: Path, g_tetrads: List[Dict[str, Any]]
+) -> List[Residue]:
+    """
+    Given a mmCIF.gz path and a list of G-tetrads extracted from JSON,
+    return the unique residues participating in those tetrads.
+
+    Parameters
+    ----------
+    cif_path : Path
+        Path to the ``*.cif.gz`` structure file.
+    g_tetrads : list[Dict[str, Any]]
+        Output of :pyfunc:`extract_g_tetrads`.
+
+    Returns
+    -------
+    List[rnapolis.tertiary_v2.Residue]
+        Unique residues corresponding to the nt identifiers in the tetrads.
+        If the structure file is missing or unreadable an empty list is
+        returned.
+    """
+    if not cif_path.is_file():
+        print(f"Structure file not found: {cif_path}")
+        return []
+
+    try:
+        with gzip.open(cif_path, "rt", encoding="utf-8") as handle:
+            atoms_df = parse_cif_atoms(handle)
+    except Exception as exc:  # noqa: BLE001
+        print(f"Could not parse {cif_path}: {exc}")
+        return []
+
+    structure = Structure(atoms_df)
+    residue_lookup = {str(residue): residue for residue in structure.residues}
+
+    residues: Set[Residue] = set()
+    for tetrad_entry in g_tetrads:
+        tetrad = tetrad_entry["tetrad"]
+        for i in range(1, 5):
+            nt_id = tetrad.get(f"nt{i}")
+            if isinstance(nt_id, str) and nt_id in residue_lookup:
+                residues.add(residue_lookup[nt_id])
+
+    return list(residues)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Process all JSON files in a directory."
+        description=(
+            "Process all JSON files in a directory and analyse G-tetrads "
+            "using corresponding structure files."
+        )
     )
     parser.add_argument(
-        "directory",
+        "json_directory",
         type=Path,
         help="Directory containing .json files",
+    )
+    parser.add_argument(
+        "cif_directory",
+        type=Path,
+        help="Directory containing .cif.gz files with the same base names",
     )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    mapping = load_json_files(args.directory)
+    mapping = load_json_files(args.json_directory)
     print(f"Loaded {len(mapping)} JSON files:")
     for name, entry in mapping.items():
         print(
@@ -213,10 +271,17 @@ def main() -> None:
             f"{len(entry['nucleotide_map'])} indexed by fullName, "
             f"{len(entry['g_tetrads'])} G-tetrads"
         )
+
         if entry["g_tetrads"]:
+            # Locate and parse matching structure file
+            base_name = Path(name).stem  # remove .json
+            cif_path = args.cif_directory / f"{base_name}.cif.gz"
+            residues = collect_tetrad_residues(cif_path, entry["g_tetrads"])
+
             first = entry["g_tetrads"][0]
             print(f"    First tetrad: {first['tetrad']}")
             print(f"    Base pairs: {first['pairs']}")
+            print(f"    Residues found in structure: {len(residues)}")
 
 
 if __name__ == "__main__":
