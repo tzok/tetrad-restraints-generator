@@ -18,8 +18,11 @@ import gzip
 from pathlib import Path
 from typing import Dict, Any, List, Set
 
+import numpy as np
+import matplotlib.pyplot as plt
+
 from rnapolis.parser_v2 import parse_cif_atoms
-from rnapolis.tertiary_v2 import Structure, Residue
+from rnapolis.tertiary_v2 import Structure, Residue, calculate_torsion_angle
 
 
 def build_nucleotide_map(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -240,6 +243,77 @@ def collect_tetrad_residues(
     return list(residues)
 
 
+def analyse_tetrad_geometry(
+    structure: Structure,
+    residue_lookup: Dict[str, Residue],
+    g_tetrads: List[Dict[str, Any]],
+) -> tuple[list[float], list[float], list[float], list[float]]:
+    """
+    For the provided G-tetrads calculate geometric properties:
+
+    1. N1–O6 inter-atomic distances for every base pair.
+    2. N2–N7 inter-atomic distances for every base pair.
+    3. Torsion angle between N9 atoms (ordered nt1→nt2→nt3→nt4).
+    4. Torsion angle between O6 atoms (ordered nt1→nt2→nt3→nt4).
+
+    Returns four lists with the collected values.
+    """
+    dist_n1_o6: list[float] = []
+    dist_n2_n7: list[float] = []
+    tors_n9: list[float] = []
+    tors_o6: list[float] = []
+
+    for tetrad_entry in g_tetrads:
+        tetrad = tetrad_entry["tetrad"]
+        nts_order = [tetrad.get(f"nt{i}") for i in range(1, 5)]
+
+        # ----- torsion angles -------------------------------------------------
+        residues_ordered = []
+        for nt in nts_order:
+            res = residue_lookup.get(nt)
+            if res is None:
+                break
+            residues_ordered.append(res)
+        if len(residues_ordered) == 4:
+            atoms_n9 = [r.find_atom("N9") for r in residues_ordered]
+            atoms_o6 = [r.find_atom("O6") for r in residues_ordered]
+            if all(atoms_n9):
+                tors_n9.append(
+                    calculate_torsion_angle(
+                        *(atom.coordinates for atom in atoms_n9)  # type: ignore[arg-type]
+                    )
+                )
+            if all(atoms_o6):
+                tors_o6.append(
+                    calculate_torsion_angle(
+                        *(atom.coordinates for atom in atoms_o6)  # type: ignore[arg-type]
+                    )
+                )
+
+        # ----- distances for each base pair ----------------------------------
+        for nt_a, nt_b in tetrad_entry["pairs"]:
+            res_a = residue_lookup.get(nt_a)
+            res_b = residue_lookup.get(nt_b)
+            if res_a is None or res_b is None:
+                continue
+
+            atom_n1 = res_a.find_atom("N1")
+            atom_o6 = res_b.find_atom("O6")
+            if atom_n1 and atom_o6:
+                dist_n1_o6.append(
+                    np.linalg.norm(atom_n1.coordinates - atom_o6.coordinates).item()
+                )
+
+            atom_n2 = res_a.find_atom("N2")
+            atom_n7 = res_b.find_atom("N7")
+            if atom_n2 and atom_n7:
+                dist_n2_n7.append(
+                    np.linalg.norm(atom_n2.coordinates - atom_n7.coordinates).item()
+                )
+
+    return dist_n1_o6, dist_n2_n7, tors_n9, tors_o6
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -263,6 +337,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     mapping = load_json_files(args.json_directory)
+
+    # Accumulators for global histograms
+    all_n1_o6: list[float] = []
+    all_n2_n7: list[float] = []
+    all_tors_n9: list[float] = []
+    all_tors_o6: list[float] = []
     print(f"Loaded {len(mapping)} JSON files:")
     for name, entry in mapping.items():
         print(
@@ -277,11 +357,52 @@ def main() -> None:
             base_name = Path(name).stem  # remove .json
             cif_path = args.cif_directory / f"{base_name}.cif.gz"
             residues = collect_tetrad_residues(cif_path, entry["g_tetrads"])
+            if residues:
+                # Build lookup once structure is confirmed
+                structure = Structure(parse_cif_atoms(gzip.open(cif_path, "rt")))
+                residue_lookup = {str(r): r for r in structure.residues}
+
+                d1, d2, t1, t2 = analyse_tetrad_geometry(
+                    structure, residue_lookup, entry["g_tetrads"]
+                )
+                all_n1_o6.extend(d1)
+                all_n2_n7.extend(d2)
+                all_tors_n9.extend(t1)
+                all_tors_o6.extend(t2)
 
             first = entry["g_tetrads"][0]
             print(f"    First tetrad: {first['tetrad']}")
             print(f"    Base pairs: {first['pairs']}")
             print(f"    Residues found in structure: {len(residues)}")
+
+    # ------------------------------ histograms ------------------------------
+    if all_n1_o6:
+        plt.figure()
+        plt.hist(all_n1_o6, bins=30, color="steelblue", edgecolor="black")
+        plt.title("N1–O6 distances")
+        plt.xlabel("Distance (Å)")
+
+    if all_n2_n7:
+        plt.figure()
+        plt.hist(all_n2_n7, bins=30, color="seagreen", edgecolor="black")
+        plt.title("N2–N7 distances")
+        plt.xlabel("Distance (Å)")
+
+    if all_tors_n9:
+        plt.figure()
+        plt.hist(np.degrees(all_tors_n9), bins=30, color="tomato", edgecolor="black")
+        plt.title("Torsion angle between N9 atoms")
+        plt.xlabel("Angle (degrees)")
+
+    if all_tors_o6:
+        plt.figure()
+        plt.hist(np.degrees(all_tors_o6), bins=30, color="orchid", edgecolor="black")
+        plt.title("Torsion angle between O6 atoms")
+        plt.xlabel("Angle (degrees)")
+
+    if any((all_n1_o6, all_n2_n7, all_tors_n9, all_tors_o6)):
+        plt.tight_layout()
+        plt.show()
 
 
 if __name__ == "__main__":
