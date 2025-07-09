@@ -21,6 +21,7 @@ from typing import Dict, Any, List, Set
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import stats
 
 from rnapolis.parser_v2 import parse_cif_atoms
 from rnapolis.tertiary_v2 import Structure, Residue, calculate_torsion_angle
@@ -360,6 +361,12 @@ def parse_args() -> argparse.Namespace:
         default=Path(".statistics_cache.json"),
         help="Path to cache file for geometry results (default: .statistics_cache.json)",
     )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        default=Path("fitted_params.json"),
+        help="Path where fitted distribution parameters will be stored",
+    )
     return parser.parse_args()
 
 
@@ -424,30 +431,76 @@ def main() -> None:
             else:
                 print("    No residues found – skipping geometry")
 
+    # ---------------------------- fit distributions --------------------------
+    fitted_params: Dict[str, Any] = {}
+
+    if all_n1_o6:
+        mu, sigma = stats.norm.fit(all_n1_o6)
+        fitted_params["n1_o6"] = {"mu": mu, "sigma": sigma}
+
+    if all_n2_n7:
+        mu, sigma = stats.norm.fit(all_n2_n7)
+        fitted_params["n2_n7"] = {"mu": mu, "sigma": sigma}
+
+    if all_tors_n9:
+        kappa, loc, scale = stats.vonmises.fit(all_tors_n9, fscale=1)
+        fitted_params["tors_n9"] = {"kappa": kappa, "loc": loc}
+
+    if all_tors_o6:
+        kappa, loc, scale = stats.vonmises.fit(all_tors_o6, fscale=1)
+        fitted_params["tors_o6"] = {"kappa": kappa, "loc": loc}
+
     # ------------------------------ histograms ------------------------------
     if all_n1_o6:
         plt.figure()
-        plt.hist(all_n1_o6, bins=30, color="steelblue", edgecolor="black")
+        plt.hist(all_n1_o6, bins=30, density=True, color="steelblue", edgecolor="black")
         plt.title("N1–O6 distances")
         plt.xlabel("Distance (Å)")
 
+        # overlay fitted normal
+        params = fitted_params["n1_o6"]
+        x = np.linspace(min(all_n1_o6), max(all_n1_o6), 200)
+        plt.plot(x, stats.norm.pdf(x, params["mu"], params["sigma"]), "k--", lw=2)
+
     if all_n2_n7:
         plt.figure()
-        plt.hist(all_n2_n7, bins=30, color="seagreen", edgecolor="black")
+        plt.hist(all_n2_n7, bins=30, density=True, color="seagreen", edgecolor="black")
         plt.title("N2–N7 distances")
         plt.xlabel("Distance (Å)")
 
+        params = fitted_params["n2_n7"]
+        x = np.linspace(min(all_n2_n7), max(all_n2_n7), 200)
+        plt.plot(x, stats.norm.pdf(x, params["mu"], params["sigma"]), "k--", lw=2)
+
     if all_tors_n9:
         plt.figure()
-        plt.hist(np.degrees(all_tors_n9), bins=30, color="tomato", edgecolor="black")
+        plt.hist(np.degrees(all_tors_n9), bins=30, density=True, color="tomato", edgecolor="black")
         plt.title("Torsion angle between N9 atoms")
         plt.xlabel("Angle (degrees)")
 
+        params = fitted_params["tors_n9"]
+        rad_range = np.linspace(min(all_tors_n9), max(all_tors_n9), 360)
+        plt.plot(
+            np.degrees(rad_range),
+            stats.vonmises.pdf(rad_range, params["kappa"], loc=params["loc"]),
+            "k--",
+            lw=2,
+        )
+
     if all_tors_o6:
         plt.figure()
-        plt.hist(np.degrees(all_tors_o6), bins=30, color="orchid", edgecolor="black")
+        plt.hist(np.degrees(all_tors_o6), bins=30, density=True, color="orchid", edgecolor="black")
         plt.title("Torsion angle between O6 atoms")
         plt.xlabel("Angle (degrees)")
+
+        params = fitted_params["tors_o6"]
+        rad_range = np.linspace(min(all_tors_o6), max(all_tors_o6), 360)
+        plt.plot(
+            np.degrees(rad_range),
+            stats.vonmises.pdf(rad_range, params["kappa"], loc=params["loc"]),
+            "k--",
+            lw=2,
+        )
 
     if any((all_n1_o6, all_n2_n7, all_tors_n9, all_tors_o6)):
         plt.tight_layout()
@@ -455,6 +508,14 @@ def main() -> None:
 
     # ------------------------ save updated cache -----------------------------
     save_cache(args.cache_file, cache)
+
+    # ---------------------- write fitted parameters --------------------------
+    try:
+        with args.output_json.open("w", encoding="utf-8") as fp:
+            json.dump(fitted_params, fp, indent=2)
+        print(f"Saved fitted parameters to {args.output_json}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"Could not write fitted parameters: {exc}")
 
 
 if __name__ == "__main__":
