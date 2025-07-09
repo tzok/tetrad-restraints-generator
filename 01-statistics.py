@@ -67,7 +67,7 @@ def extract_g_tetrads(
         Each item is a dictionary with two keys:
 
         - ``"tetrad"`` – the original tetrad object
-        - ``"pairs"``  – list with the six collected nucleotide pairs
+        - ``"pairs"``  – list with the four collected nucleotide pairs ``(nt1‒nt2, nt2‒nt3, nt3‒nt4, nt4‒nt1)``
 
     Parameters
     ----------
@@ -102,12 +102,11 @@ def extract_g_tetrads(
                 ):
                     continue
 
-                # --- condition 2: validate all six base-pairs ------------------
+                # --- condition 2: validate all four base-pairs -----------------
                 collected_pairs: list[tuple[str, str]] = []
                 valid = True
-                for i in range(4):
-                    for j in range(i + 1, 4):
-                        a, b = nts[i], nts[j]
+                for i, j in ((0, 1), (1, 2), (2, 3), (3, 0)):
+                    a, b = nts[i], nts[j]
 
                         bp = base_pair_lookup.get((a, b))
                         if bp is None:
@@ -128,7 +127,7 @@ def extract_g_tetrads(
                     if not valid:
                         break
 
-                if valid and len(collected_pairs) == 6:
+                if valid and len(collected_pairs) == 4:
                     g_tetrads.append({"tetrad": tetrad, "pairs": collected_pairs})
 
     return g_tetrads
