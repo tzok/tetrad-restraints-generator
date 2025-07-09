@@ -16,6 +16,7 @@ Example
 $ python 02-restraints.py "...q...Q...q...Q"
 {'q': [(3, 'q'), (7, 'Q'), (11, 'q'), (15, 'Q')]}
 """
+
 from __future__ import annotations
 
 import argparse
@@ -54,7 +55,9 @@ def parse_qrs(qrs: str) -> Dict[str, List[Tuple[int, str]]]:
     # Validate counts and case distribution
     for key, occurrences in mapping.items():
         if len(occurrences) != 4:
-            raise ValueError(f"Letter '{key}' occurs {len(occurrences)} times, expected 4")
+            raise ValueError(
+                f"Letter '{key}' occurs {len(occurrences)} times, expected 4"
+            )
         lower = sum(1 for _, c in occurrences if c.islower())
         upper = 4 - lower
         if lower != 2 or upper != 2:
