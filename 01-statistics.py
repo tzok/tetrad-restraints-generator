@@ -18,6 +18,7 @@ import gzip
 from pathlib import Path
 from typing import Dict, Any, List, Set
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -243,6 +244,28 @@ def collect_tetrad_residues(
     return list(residues)
 
 
+def load_cache(cache_file: Path) -> Dict[str, Any]:
+    """
+    Load cache from *cache_file* if it exists, otherwise return empty dict.
+    """
+    if cache_file.is_file():
+        try:
+            with cache_file.open("r", encoding="utf-8") as fp:
+                return json.load(fp)
+        except Exception:  # noqa: BLE001
+            pass
+    return {}
+
+
+def save_cache(cache_file: Path, cache_data: Dict[str, Any]) -> None:
+    """Write *cache_data* into *cache_file* as JSON."""
+    try:
+        with cache_file.open("w", encoding="utf-8") as fp:
+            json.dump(cache_data, fp)
+    except Exception as exc:  # noqa: BLE001
+        print(f"Could not write cache to {cache_file}: {exc}")
+
+
 def analyse_tetrad_geometry(
     structure: Structure,
     residue_lookup: Dict[str, Residue],
@@ -331,6 +354,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Directory containing .cif.gz files with the same base names",
     )
+    parser.add_argument(
+        "--cache-file",
+        type=Path,
+        default=Path(".statistics_cache.json"),
+        help="Path to cache file for geometry results (default: .statistics_cache.json)",
+    )
     return parser.parse_args()
 
 
@@ -344,6 +373,8 @@ def main() -> None:
     all_tors_n9: list[float] = []
     all_tors_o6: list[float] = []
     print(f"Loaded {len(mapping)} JSON files:")
+    cache = load_cache(args.cache_file)
+
     for name, entry in mapping.items():
         print(
             f"  {name}: "
@@ -352,13 +383,22 @@ def main() -> None:
             f"{len(entry['g_tetrads'])} G-tetrads"
         )
 
+        # -------------------- use cached geometry if available ---------------
+        if name in cache:
+            cached = cache[name]
+            all_n1_o6.extend(cached.get("n1_o6", []))
+            all_n2_n7.extend(cached.get("n2_n7", []))
+            all_tors_n9.extend(cached.get("tors_n9", []))
+            all_tors_o6.extend(cached.get("tors_o6", []))
+            print("    Loaded geometry from cache")
+            continue
+
+        # -------------------- compute geometry --------------------------------
         if entry["g_tetrads"]:
-            # Locate and parse matching structure file
-            base_name = Path(name).stem  # remove .json
+            base_name = Path(name).stem
             cif_path = args.cif_directory / f"{base_name}.cif.gz"
             residues = collect_tetrad_residues(cif_path, entry["g_tetrads"])
             if residues:
-                # Build lookup once structure is confirmed
                 structure = Structure(parse_cif_atoms(gzip.open(cif_path, "rt")))
                 residue_lookup = {str(r): r for r in structure.residues}
 
@@ -370,10 +410,19 @@ def main() -> None:
                 all_tors_n9.extend(t1)
                 all_tors_o6.extend(t2)
 
-            first = entry["g_tetrads"][0]
-            print(f"    First tetrad: {first['tetrad']}")
-            print(f"    Base pairs: {first['pairs']}")
-            print(f"    Residues found in structure: {len(residues)}")
+                cache[name] = {
+                    "n1_o6": d1,
+                    "n2_n7": d2,
+                    "tors_n9": t1,
+                    "tors_o6": t2,
+                }
+
+                first = entry["g_tetrads"][0]
+                print(f"    First tetrad: {first['tetrad']}")
+                print(f"    Base pairs: {first['pairs']}")
+                print(f"    Residues found in structure: {len(residues)}")
+            else:
+                print("    No residues found – skipping geometry")
 
     # ------------------------------ histograms ------------------------------
     if all_n1_o6:
@@ -403,6 +452,9 @@ def main() -> None:
     if any((all_n1_o6, all_n2_n7, all_tors_n9, all_tors_o6)):
         plt.tight_layout()
         plt.show()
+
+    # ------------------------ save updated cache -----------------------------
+    save_cache(args.cache_file, cache)
 
 
 if __name__ == "__main__":
