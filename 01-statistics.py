@@ -41,6 +41,41 @@ def build_nucleotide_map(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     return index
 
 
+def extract_g_tetrads(
+    data: Dict[str, Any], nucleotide_map: Dict[str, Dict[str, Any]]
+) -> list[Dict[str, Any]]:
+    """
+    Extract tetrads whose four nucleotides are all guanines
+    (i.e. every nucleotide referenced by ``nt1``‒``nt4`` has
+    ``shortName`` == "G").
+
+    Parameters
+    ----------
+    data : Dict[str, Any]
+        Original JSON content.
+    nucleotide_map : Dict[str, Dict[str, Any]]
+        Mapping created by :pyfunc:`build_nucleotide_map`.
+
+    Returns
+    -------
+    list[Dict[str, Any]]
+        List of tetrad dictionaries that satisfy the condition.
+    """
+    g_tetrads: list[Dict[str, Any]] = []
+    for helix in data.get("helices", []):
+        for quad in helix.get("quadruplexes", []):
+            for tetrad in quad.get("tetrads", []):
+                nts = [tetrad.get(f"nt{i}") for i in range(1, 5)]
+                if all(
+                    isinstance(nt, str)
+                    and nt in nucleotide_map
+                    and nucleotide_map[nt].get("shortName") == "G"
+                    for nt in nts
+                ):
+                    g_tetrads.append(tetrad)
+    return g_tetrads
+
+
 def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
     """
     Load every ``*.json`` file in *directory* that contains at least one helix
@@ -54,6 +89,7 @@ def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
     - ``"data"`` – the raw JSON loaded from disk
     - ``"nucleotide_map"`` – ``Dict[str, Dict[str, Any]]`` created from the
       nucleotide list
+    - ``"g_tetrads"`` – ``List[Dict[str, Any]]`` where every nucleotide is a G
 
     Parameters
     ----------
@@ -83,9 +119,11 @@ def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
                 and len(helix["quadruplexes"]) > 0
                 for helix in helices
             ):
+                nucleotide_map = build_nucleotide_map(data)
                 json_map[json_file.name] = {
                     "data": data,
-                    "nucleotide_map": build_nucleotide_map(data),
+                    "nucleotide_map": nucleotide_map,
+                    "g_tetrads": extract_g_tetrads(data, nucleotide_map),
                 }
         except json.JSONDecodeError as exc:
             # In a full implementation you might want to log or collect errors.
@@ -114,7 +152,8 @@ def main() -> None:
         print(
             f"  {name}: "
             f"{len(entry['data'].get('nucleotides', []))} nucleotides, "
-            f"{len(entry['nucleotide_map'])} indexed by fullName"
+            f"{len(entry['nucleotide_map'])} indexed by fullName, "
+            f"{len(entry['g_tetrads'])} G-tetrads"
         )
 
 
