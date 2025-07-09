@@ -167,11 +167,11 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
 
             # N1-O6
             lines.append(
-                f"{r_i};N1;{r_j};O6;{mu_n1_o6:.3f};{minus_n1_o6:.3f};{plus_n1_o6:.3f}"
+                f"{r_i} N1 {r_j} O6 {mu_n1_o6:.3f} {minus_n1_o6:.3f} {plus_n1_o6:.3f}"
             )
             # N2-N7
             lines.append(
-                f"{r_i};N2;{r_j};N7;{mu_n2_n7:.3f};{minus_n2_n7:.3f};{plus_n2_n7:.3f}"
+                f"{r_i} N2 {r_j} N7 {mu_n2_n7:.3f} {minus_n2_n7:.3f} {plus_n2_n7:.3f}"
             )
     return lines
 
