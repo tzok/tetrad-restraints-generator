@@ -474,7 +474,13 @@ def main() -> None:
 
     if all_tors_n9:
         plt.figure()
-        plt.hist(np.degrees(all_tors_n9), bins=30, density=True, color="tomato", edgecolor="black")
+        plt.hist(
+            np.degrees(all_tors_n9),
+            bins=30,
+            density=True,
+            color="tomato",
+            edgecolor="black",
+        )
         plt.title("Torsion angle between N9 atoms")
         plt.xlabel("Angle (degrees)")
 
@@ -489,7 +495,13 @@ def main() -> None:
 
     if all_tors_o6:
         plt.figure()
-        plt.hist(np.degrees(all_tors_o6), bins=30, density=True, color="orchid", edgecolor="black")
+        plt.hist(
+            np.degrees(all_tors_o6),
+            bins=30,
+            density=True,
+            color="orchid",
+            edgecolor="black",
+        )
         plt.title("Torsion angle between O6 atoms")
         plt.xlabel("Angle (degrees)")
 
