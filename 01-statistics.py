@@ -108,24 +108,24 @@ def extract_g_tetrads(
                 for i, j in ((0, 1), (1, 2), (2, 3), (3, 0)):
                     a, b = nts[i], nts[j]
 
-                        bp = base_pair_lookup.get((a, b))
-                        if bp is None:
-                            bp = base_pair_lookup.get((b, a))
+                    bp = base_pair_lookup.get((a, b))
+                    if bp is None:
+                        bp = base_pair_lookup.get((b, a))
 
-                        if bp is None:
-                            valid = False
-                            break
-
-                        lw = bp.get("lw")
-                        if lw == "cWH":
-                            collected_pairs.append((bp["nt1"], bp["nt2"]))
-                        elif lw == "cHW":
-                            collected_pairs.append((bp["nt2"], bp["nt1"]))
-                        else:
-                            valid = False
-                            break
-                    if not valid:
+                    if bp is None:
+                        valid = False
                         break
+
+                    lw = bp.get("lw")
+                    if lw == "cWH":
+                        collected_pairs.append((bp["nt1"], bp["nt2"]))
+                    elif lw == "cHW":
+                        collected_pairs.append((bp["nt2"], bp["nt1"]))
+                    else:
+                        valid = False
+                        break
+                if not valid:
+                    break
 
                 if valid and len(collected_pairs) == 4:
                     g_tetrads.append({"tetrad": tetrad, "pairs": collected_pairs})
