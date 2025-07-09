@@ -213,6 +213,10 @@ def main() -> None:
             f"{len(entry['nucleotide_map'])} indexed by fullName, "
             f"{len(entry['g_tetrads'])} G-tetrads"
         )
+        if entry["g_tetrads"]:
+            first = entry["g_tetrads"][0]
+            print(f"    First tetrad: {first['tetrad']}")
+            print(f"    Base pairs: {first['pairs']}")
 
 
 if __name__ == "__main__":
