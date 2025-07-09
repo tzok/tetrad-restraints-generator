@@ -124,9 +124,7 @@ def load_fitted_params(path: Path) -> Dict[str, Dict[str, float]]:
         with path.open("r", encoding="utf-8") as fp:
             return json.load(fp)
     except FileNotFoundError as exc:
-        raise FileNotFoundError(
-            f"Cannot find fitted parameters file: {path}"
-        ) from exc
+        raise FileNotFoundError(f"Cannot find fitted parameters file: {path}") from exc
 
 
 def build_pairs(order: str) -> List[Tuple[int, int]]:
@@ -142,9 +140,7 @@ def build_pairs(order: str) -> List[Tuple[int, int]]:
     return patterns[order]
 
 
-def generate_restraints(
-    qrs: str, params: Dict[str, Dict[str, float]]
-) -> List[str]:
+def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[str]:
     """
     Create restraint lines for *qrs* using statistics in *params*.
     Returns list of lines including the mandatory header ``1;1``.
