@@ -9,6 +9,7 @@ Example
 -------
 $ python 01-statistics.py data/
 """
+
 from __future__ import annotations
 
 import argparse
@@ -48,7 +49,9 @@ def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Process all JSON files in a directory.")
+    parser = argparse.ArgumentParser(
+        description="Process all JSON files in a directory."
+    )
     parser.add_argument(
         "directory",
         type=Path,
