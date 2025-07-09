@@ -53,9 +53,9 @@ def extract_g_tetrads(
        a record in the global ``basePairs`` list whose ``lw`` annotation is
        either ``"cWH"`` or ``"cHW"``:
 
-       • If ``lw == "cWH"`` we collect the pair exactly as stored  
-         ``(base_pair["nt1"], base_pair["nt2"])``.  
-       • If ``lw == "cHW"`` we collect the reversed order  
+       • If ``lw == "cWH"`` we collect the pair exactly as stored
+         ``(base_pair["nt1"], base_pair["nt2"])``.
+       • If ``lw == "cHW"`` we collect the reversed order
          ``(base_pair["nt2"], base_pair["nt1"])``.
 
        Should any pair be missing or use another ``lw`` annotation the whole
