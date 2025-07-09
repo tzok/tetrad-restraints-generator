@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import math
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -142,8 +143,22 @@ def build_pairs(order: str) -> List[Tuple[int, int]]:
 
 def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[str]:
     """
-    Create restraint lines for *qrs* using statistics in *params*.
-    Returns list of lines including the mandatory header ``1;1``.
+    Create distance and torsion restraints for *qrs* using statistics in
+    *params*.
+
+    Output format
+    -------------
+    Distance block:
+        1;1
+        idx1 N1 idx2 O6 mean minus plus
+        idx1 N2 idx2 N7 mean minus plus
+        … (8 lines per letter)
+
+    Torsion block:
+        1;1
+        i1 N9 i2 N9 i3 N9 i4 N9 10 angle range 2
+        i1 O6 i2 O6 i3 O6 i4 O6 10 angle range 2
+        … (2 lines per letter)
     """
     mapping = parse_qrs(qrs)
     classes = classify_letters(mapping)
@@ -156,6 +171,13 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
     mu_n2_n7 = params["n2_n7"]["mu"]
     minus_n2_n7 = mu_n2_n7 - params["n2_n7"]["ci99"][0]
     plus_n2_n7 = params["n2_n7"]["ci99"][1] - mu_n2_n7
+
+    # Torsion statistics (stored in radians → convert to degrees)
+    tors_n9_loc_deg = math.degrees(params["tors_n9"]["loc"])
+    tors_n9_range_deg = math.degrees(params["tors_n9"]["ci99"][1]) - tors_n9_loc_deg
+
+    tors_o6_loc_deg = math.degrees(params["tors_o6"]["loc"])
+    tors_o6_range_deg = math.degrees(params["tors_o6"]["ci99"][1]) - tors_o6_loc_deg
 
     lines = ["1;1"]
     for letter, occurrences in mapping.items():
@@ -173,6 +195,34 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
             lines.append(
                 f"{r_i} N2 {r_j} N7 {mu_n2_n7:.3f} {minus_n2_n7:.3f} {plus_n2_n7:.3f}"
             )
+    # ---------------------------- torsion block -----------------------------
+    lines.append("1;1")
+    torsion_order = {
+        "O+": [0, 1, 2, 3],
+        "O-": [0, 3, 2, 1],
+        "N+": [0, 1, 3, 2],
+        "N-": [0, 2, 3, 1],
+        "Z+": [0, 2, 1, 3],
+        "Z-": [0, 3, 1, 2],
+    }
+
+    for letter, occurrences in mapping.items():
+        ordered = sorted(occurrences, key=lambda t: t[0])
+        indices = [idx + 1 for idx, _ in ordered]
+        order = torsion_order[classes[letter]]
+        i1, i2, i3, i4 = (indices[k] for k in order)
+
+        # N9 torsion
+        lines.append(
+            f"{i1} N9 {i2} N9 {i3} N9 {i4} N9 10 "
+            f"{tors_n9_loc_deg:.2f} {tors_n9_range_deg:.2f} 2"
+        )
+        # O6 torsion
+        lines.append(
+            f"{i1} O6 {i2} O6 {i3} O6 {i4} O6 10 "
+            f"{tors_o6_loc_deg:.2f} {tors_o6_range_deg:.2f} 2"
+        )
+
     return lines
 
 
