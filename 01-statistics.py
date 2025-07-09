@@ -20,7 +20,8 @@ from typing import Dict, Any
 
 def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
     """
-    Load every ``*.json`` file in *directory*.
+    Load every ``*.json`` file in *directory* that contains at least one helix
+    with a non-empty ``quadruplexes`` list.
 
     Parameters
     ----------
@@ -40,7 +41,13 @@ def load_json_files(directory: Path) -> Dict[str, Dict[str, Any]]:
     for json_file in directory.glob("*.json"):
         try:
             with json_file.open("r", encoding="utf-8") as fp:
-                json_map[json_file.name] = json.load(fp)
+                data = json.load(fp)
+
+            # keep only files that have at least one helix
+            # whose ``quadruplexes`` list is not empty
+            helices = data.get("helices", [])
+            if any(helix.get("quadruplexes") for helix in helices):
+                json_map[json_file.name] = data
         except json.JSONDecodeError as exc:
             # In a full implementation you might want to log or collect errors.
             print(f"Skipping {json_file} – invalid JSON: {exc}")
