@@ -9,6 +9,7 @@ The page:
 3. On “Submit” it calls the generator implemented in *02-restraints.py* and
    shows the resulting block that can be copy-pasted into external software.
 """
+
 from __future__ import annotations
 
 import json
@@ -89,25 +90,45 @@ def main() -> None:
 
     # Distance N1-O6
     st.sidebar.subheader("N1–O6 distance (Å)")
-    mu_n1o6 = st.sidebar.number_input("Mean", value=float(mu_n1o6), step=0.01, key="n1o6_mu")
-    minus_n1o6 = st.sidebar.number_input("Minus", value=float(minus_n1o6), step=0.01, key="n1o6_minus")
-    plus_n1o6 = st.sidebar.number_input("Plus", value=float(plus_n1o6), step=0.01, key="n1o6_plus")
+    mu_n1o6 = st.sidebar.number_input(
+        "Mean", value=float(mu_n1o6), step=0.01, key="n1o6_mu"
+    )
+    minus_n1o6 = st.sidebar.number_input(
+        "Minus", value=float(minus_n1o6), step=0.01, key="n1o6_minus"
+    )
+    plus_n1o6 = st.sidebar.number_input(
+        "Plus", value=float(plus_n1o6), step=0.01, key="n1o6_plus"
+    )
 
     # Distance N2-N7
     st.sidebar.subheader("N2–N7 distance (Å)")
-    mu_n2n7 = st.sidebar.number_input("Mean ", value=float(mu_n2n7), step=0.01, key="n2n7_mu")
-    minus_n2n7 = st.sidebar.number_input("Minus ", value=float(minus_n2n7), step=0.01, key="n2n7_minus")
-    plus_n2n7 = st.sidebar.number_input("Plus ", value=float(plus_n2n7), step=0.01, key="n2n7_plus")
+    mu_n2n7 = st.sidebar.number_input(
+        "Mean ", value=float(mu_n2n7), step=0.01, key="n2n7_mu"
+    )
+    minus_n2n7 = st.sidebar.number_input(
+        "Minus ", value=float(minus_n2n7), step=0.01, key="n2n7_minus"
+    )
+    plus_n2n7 = st.sidebar.number_input(
+        "Plus ", value=float(plus_n2n7), step=0.01, key="n2n7_plus"
+    )
 
     # Torsion N9
     st.sidebar.subheader("N9 planarity (°)")
-    loc_n9_deg = st.sidebar.number_input("Angle", value=float(loc_n9_deg), step=1.0, key="n9_loc")
-    range_n9_deg = st.sidebar.number_input("± Range", value=float(range_n9_deg), step=1.0, key="n9_rng")
+    loc_n9_deg = st.sidebar.number_input(
+        "Angle", value=float(loc_n9_deg), step=1.0, key="n9_loc"
+    )
+    range_n9_deg = st.sidebar.number_input(
+        "± Range", value=float(range_n9_deg), step=1.0, key="n9_rng"
+    )
 
     # Torsion O6
     st.sidebar.subheader("O6 planarity (°)")
-    loc_o6_deg = st.sidebar.number_input("Angle ", value=float(loc_o6_deg), step=1.0, key="o6_loc")
-    range_o6_deg = st.sidebar.number_input("± Range ", value=float(range_o6_deg), step=1.0, key="o6_rng")
+    loc_o6_deg = st.sidebar.number_input(
+        "Angle ", value=float(loc_o6_deg), step=1.0, key="o6_loc"
+    )
+    range_o6_deg = st.sidebar.number_input(
+        "± Range ", value=float(range_o6_deg), step=1.0, key="o6_rng"
+    )
 
     # ------------------------------ main ------------------------------------
     qrs_input = st.text_input("QRS sequence", placeholder="...q...Q...q...Q")
