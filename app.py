@@ -18,7 +18,7 @@ from pathlib import Path
 import streamlit as st
 
 # Re-use the logic from the CLI tool
-from 02_restraints import (
+from restraints import (
     generate_restraints,
     load_fitted_params,
 )  # ruff: noqa: E402  # local import
