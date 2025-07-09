@@ -35,10 +35,17 @@ def _load_default_params(path: Path) -> dict:
         st.warning(f"Parameters file not found: {path}\nUsing placeholders.")
         # minimal fallback with dummy ranges
         return {
-            "n1_o6": {"mu": 3.0, "ci99": [2.5, 3.5]},
-            "n2_n7": {"mu": 3.2, "ci99": [2.7, 3.7]},
-            "tors_n9": {"loc": math.radians(0.0), "ci99": [math.radians(-30), math.radians(30)]},
-            "tors_o6": {"loc": math.radians(0.0), "ci99": [math.radians(-30), math.radians(30)]},
+            # default placeholders requested by the user
+            "n1_o6": {"mu": 2.9, "ci99": [2.4, 3.4]},  # 2.9 ± 0.5 Å
+            "n2_n7": {"mu": 2.9, "ci99": [2.4, 3.4]},  # 2.9 ± 0.5 Å
+            "tors_n9": {
+                "loc": math.radians(0.0),
+                "ci99": [math.radians(-15), math.radians(15)],  # 0 ± 15°
+            },
+            "tors_o6": {
+                "loc": math.radians(0.0),
+                "ci99": [math.radians(-15), math.radians(15)],  # 0 ± 15°
+            },
         }
 
 
