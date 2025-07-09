@@ -485,13 +485,15 @@ def main() -> None:
         plt.xlabel("Angle (degrees)")
 
         params = fitted_params["tors_n9"]
-        rad_range = np.linspace(min(all_tors_n9), max(all_tors_n9), 360)
-        plt.plot(
-            np.degrees(rad_range),
-            stats.vonmises.pdf(rad_range, params["kappa"], loc=params["loc"]),
-            "k--",
-            lw=2,
+        # Fit line (convert pdf from rad⁻¹ to deg⁻¹ by multiplying by π/180)
+        x_deg = np.linspace(
+            np.degrees(min(all_tors_n9)), np.degrees(max(all_tors_n9)), 360
         )
+        pdf = (
+            stats.vonmises.pdf(np.radians(x_deg), params["kappa"], loc=params["loc"])
+            * (np.pi / 180)
+        )
+        plt.plot(x_deg, pdf, "k--", lw=2)
 
     if all_tors_o6:
         plt.figure()
@@ -506,13 +508,14 @@ def main() -> None:
         plt.xlabel("Angle (degrees)")
 
         params = fitted_params["tors_o6"]
-        rad_range = np.linspace(min(all_tors_o6), max(all_tors_o6), 360)
-        plt.plot(
-            np.degrees(rad_range),
-            stats.vonmises.pdf(rad_range, params["kappa"], loc=params["loc"]),
-            "k--",
-            lw=2,
+        x_deg = np.linspace(
+            np.degrees(min(all_tors_o6)), np.degrees(max(all_tors_o6)), 360
         )
+        pdf = (
+            stats.vonmises.pdf(np.radians(x_deg), params["kappa"], loc=params["loc"])
+            * (np.pi / 180)
+        )
+        plt.plot(x_deg, pdf, "k--", lw=2)
 
     if any((all_n1_o6, all_n2_n7, all_tors_n9, all_tors_o6)):
         plt.tight_layout()
