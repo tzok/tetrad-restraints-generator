@@ -20,7 +20,9 @@ $ python 02-restraints.py "...q...Q...q...Q"
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 
@@ -116,12 +118,76 @@ def classify_letters(mapping: Dict[str, List[Tuple[int, str]]]) -> Dict[str, str
     return class_map
 
 
+def load_fitted_params(path: Path) -> Dict[str, Dict[str, float]]:
+    """Load *fitted_params.json* produced by 01-statistics.py."""
+    try:
+        with path.open("r", encoding="utf-8") as fp:
+            return json.load(fp)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            f"Cannot find fitted parameters file: {path}"
+        ) from exc
+
+
+def build_pairs(order: str) -> List[Tuple[int, int]]:
+    """Return list of 4 index pairs according to classification code."""
+    patterns = {
+        "O+": [(0, 1), (1, 2), (2, 3), (3, 0)],
+        "O-": [(0, 3), (3, 2), (2, 1), (1, 0)],
+        "N+": [(0, 1), (1, 3), (3, 2), (2, 0)],
+        "N-": [(0, 2), (2, 3), (3, 1), (1, 0)],
+        "Z+": [(0, 2), (2, 1), (1, 3), (3, 0)],
+        "Z-": [(0, 3), (3, 1), (1, 2), (2, 0)],
+    }
+    return patterns[order]
+
+
+def generate_restraints(
+    qrs: str, params: Dict[str, Dict[str, float]]
+) -> List[str]:
+    """
+    Create restraint lines for *qrs* using statistics in *params*.
+    Returns list of lines including the mandatory header ``1;1``.
+    """
+    mapping = parse_qrs(qrs)
+    classes = classify_letters(mapping)
+
+    # Extract statistics
+    mu_n1_o6 = params["n1_o6"]["mu"]
+    minus_n1_o6 = mu_n1_o6 - params["n1_o6"]["ci99"][0]
+    plus_n1_o6 = params["n1_o6"]["ci99"][1] - mu_n1_o6
+
+    mu_n2_n7 = params["n2_n7"]["mu"]
+    minus_n2_n7 = mu_n2_n7 - params["n2_n7"]["ci99"][0]
+    plus_n2_n7 = params["n2_n7"]["ci99"][1] - mu_n2_n7
+
+    lines = ["1;1"]
+    for letter, occurrences in mapping.items():
+        ordered = sorted(occurrences, key=lambda t: t[0])
+        indices = [idx + 1 for idx, _ in ordered]  # convert to 1-based
+        code = classes[letter]
+        for i, j in build_pairs(code):
+            r_i, r_j = indices[i], indices[j]
+
+            # N1-O6
+            lines.append(
+                f"{r_i};N1;{r_j};O6;{mu_n1_o6:.3f};{minus_n1_o6:.3f};{plus_n1_o6:.3f}"
+            )
+            # N2-N7
+            lines.append(
+                f"{r_i};N2;{r_j};N7;{mu_n2_n7:.3f};{minus_n2_n7:.3f};{plus_n2_n7:.3f}"
+            )
+    return lines
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Analyse QRS string.")
+    parser.add_argument("qrs", nargs="?", help="QRS string (dots and letters)")
     parser.add_argument(
-        "qrs",
-        nargs="?",
-        help="QRS string consisting of dots and letters",
+        "--params",
+        type=Path,
+        default=Path("fitted_params.json"),
+        help="Path to fitted_params.json",
     )
     return parser.parse_args()
 
@@ -131,10 +197,9 @@ def main() -> None:
     qrs_str = args.qrs
     if qrs_str is None:
         qrs_str = sys.stdin.readline().rstrip("\n")
-    mapping = parse_qrs(qrs_str)
-    classifications = classify_letters(mapping)
-    print("Occurrences:", mapping)
-    print("Classification:", classifications)
+    params = load_fitted_params(args.params)
+    restraint_lines = generate_restraints(qrs_str, params)
+    print("\n".join(restraint_lines))
 
 
 if __name__ == "__main__":
