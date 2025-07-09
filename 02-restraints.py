@@ -69,6 +69,53 @@ def parse_qrs(qrs: str) -> Dict[str, List[Tuple[int, str]]]:
     return mapping
 
 
+def classify_letters(mapping: Dict[str, List[Tuple[int, str]]]) -> Dict[str, str]:
+    """
+    Classify each letter according to the pattern of upper/lower-case
+    occurrences (ordered by position in the QRS string).
+
+    Pattern → classification code
+    ---------------------------------
+      ULUL → O+
+      LULU → O-
+      ULLU → N+
+      LULL → N-
+      UULL → Z+
+      LLUU → Z-
+
+    Returns
+    -------
+    Dict[str, str]
+        Mapping *letter → classification code*.
+
+    Raises
+    ------
+    ValueError
+        If any letter does not match one of the recognised patterns.
+    """
+    pattern_to_code = {
+        "ULUL": "O+",
+        "LULU": "O-",
+        "ULLU": "N+",
+        "LULL": "N-",
+        "UULL": "Z+",
+        "LLUU": "Z-",
+    }
+
+    class_map: Dict[str, str] = {}
+    for letter, occurrences in mapping.items():
+        # sort just in case (they should already be in order)
+        ordered = sorted(occurrences, key=lambda t: t[0])
+        pattern = "".join("U" if ch.isupper() else "L" for _, ch in ordered)
+        try:
+            class_map[letter] = pattern_to_code[pattern]
+        except KeyError as exc:
+            raise ValueError(
+                f"Letter '{letter}' has unsupported pattern '{pattern}'"
+            ) from exc
+    return class_map
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Analyse QRS string.")
     parser.add_argument(
@@ -85,7 +132,9 @@ def main() -> None:
     if qrs_str is None:
         qrs_str = sys.stdin.readline().rstrip("\n")
     mapping = parse_qrs(qrs_str)
-    print(mapping)
+    classifications = classify_letters(mapping)
+    print("Occurrences:", mapping)
+    print("Classification:", classifications)
 
 
 if __name__ == "__main__":
