@@ -436,19 +436,39 @@ def main() -> None:
 
     if all_n1_o6:
         mu, sigma = stats.norm.fit(all_n1_o6)
-        fitted_params["n1_o6"] = {"mu": mu, "sigma": sigma}
+        ci_low, ci_high = stats.norm.interval(0.99, loc=mu, scale=sigma)
+        fitted_params["n1_o6"] = {
+            "mu": mu,
+            "sigma": sigma,
+            "ci99": [ci_low, ci_high],
+        }
 
     if all_n2_n7:
         mu, sigma = stats.norm.fit(all_n2_n7)
-        fitted_params["n2_n7"] = {"mu": mu, "sigma": sigma}
+        ci_low, ci_high = stats.norm.interval(0.99, loc=mu, scale=sigma)
+        fitted_params["n2_n7"] = {
+            "mu": mu,
+            "sigma": sigma,
+            "ci99": [ci_low, ci_high],
+        }
 
     if all_tors_n9:
         kappa, loc, scale = stats.vonmises.fit(all_tors_n9, fscale=1)
-        fitted_params["tors_n9"] = {"kappa": kappa, "loc": loc}
+        ci_low, ci_high = stats.vonmises.interval(0.99, kappa, loc=loc, scale=1)
+        fitted_params["tors_n9"] = {
+            "kappa": kappa,
+            "loc": loc,
+            "ci99": [ci_low, ci_high],
+        }
 
     if all_tors_o6:
         kappa, loc, scale = stats.vonmises.fit(all_tors_o6, fscale=1)
-        fitted_params["tors_o6"] = {"kappa": kappa, "loc": loc}
+        ci_low, ci_high = stats.vonmises.interval(0.99, kappa, loc=loc, scale=1)
+        fitted_params["tors_o6"] = {
+            "kappa": kappa,
+            "loc": loc,
+            "ci99": [ci_low, ci_high],
+        }
 
     # ------------------------------ histograms ------------------------------
     if all_n1_o6:
