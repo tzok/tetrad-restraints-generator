@@ -256,7 +256,10 @@ def _build_planar_group(indices: List[int]) -> str:
         for idx, i in enumerate(indices_sorted)
     ]
     group_lines = (
-        ["    group selection=("] + n9_lines + o6_lines + ["    )", "    weight=$planarweight", "    end"]
+        ["    group selection=("]
+        + n9_lines
+        + o6_lines
+        + ["    )", "    weight=$planarweight", "    end"]
     )
     return "\n".join(group_lines)
 
