@@ -213,12 +213,9 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
         indices = [idx + 1 for idx, _ in ordered]
         order = torsion_order[classes[letter]]
 
-        # Build list of torsion orders to apply.
-        # For the canonical order (0, 1, 2, 3) we additionally generate the three
-        # cyclic-rotated variants requested by the user.
-        orders_to_apply = [order]
-        if order == [0, 1, 2, 3]:
-            orders_to_apply.extend([[1, 2, 3, 0], [2, 3, 1, 0], [3, 1, 0, 2]])
+        # Build list of torsion orders to apply by generating all four cyclic
+        # rotations of the base order (i.e. shift the list progressively).
+        orders_to_apply = [order[i:] + order[:i] for i in range(4)]
 
         for ord4 in orders_to_apply:
             i1, i2, i3, i4 = (indices[k] for k in ord4)
