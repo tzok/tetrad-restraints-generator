@@ -162,8 +162,24 @@ def main() -> None:
 
         try:
             restraints = generate_restraints(qrs_input, params)
+
+            # ------------------- split into distance / torsion ---------------
+            try:
+                second_idx = [i for i, l in enumerate(restraints) if l == "1;1"][1]
+                distance_lines = restraints[:second_idx]
+                torsion_lines = restraints[second_idx:]
+            except IndexError:
+                distance_lines, torsion_lines = restraints, []
+
+            dist_text = "\n".join(distance_lines)
+            tors_text = "\n".join(torsion_lines)
+
+            # Display in two monospace text areas
+            st.text_area("Distance restraints", value=dist_text, height=300)
+            st.text_area("Torsion angle restraints", value=tors_text, height=300)
+
+            # Combined output for download
             result_text = "\n".join(restraints)
-            st.text_area("Generated restraints", value=result_text, height=300)
             st.download_button(
                 "Download .rst file",
                 data=result_text,
