@@ -175,8 +175,10 @@ def main() -> None:
             tors_text = "\n".join(torsion_lines)
 
             # Display in two monospace text areas
-            st.text_area("Distance restraints", value=dist_text, height=300)
-            st.text_area("Torsion angle restraints", value=tors_text, height=300)
+            st.header("Distance restraints")
+            st.code(dist_text, language=None)
+            st.header("Torsion angle restraints")
+            st.code(tors_text, language=None)
 
             # Combined output for download
             result_text = "\n".join(restraints)
