@@ -23,6 +23,7 @@ import argparse
 import json
 import sys
 import math
+import textwrap
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -234,6 +235,104 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
     return lines
 
 
+def _build_planar_group(indices: List[int]) -> str:
+    """
+    Build an XPLOR planar‐restraint *group* block for one tetrad.
+
+    Parameters
+    ----------
+    indices : list[int]
+        Four 1-based residue indices belonging to the tetrad.
+
+    Returns
+    -------
+    str
+        Formatted multiline XPLOR group block.
+    """
+    indices_sorted = sorted(indices)
+    n9_lines = [f"        (resid {i} and name N9) or" for i in indices_sorted]
+    o6_lines = [
+        f"        (resid {i} and name O6){'' if idx == len(indices_sorted) - 1 else ' or'}"
+        for idx, i in enumerate(indices_sorted)
+    ]
+    group_lines = (
+        ["    group selection=("] + n9_lines + o6_lines + ["    )", "    weight=$planarweight", "    end"]
+    )
+    return "\n".join(group_lines)
+
+
+def generate_xplor_script(qrs: str, params: Dict[str, Dict[str, float]]) -> str:
+    """
+    Produce a complete XPLOR script with planar restraints for every tetrad in
+    *qrs*.  Geometry statistics *params* are currently unused but kept for
+    API symmetry with *generate_restraints()*.
+    """
+    mapping = parse_qrs(qrs)
+    groups_block = "\n".join(
+        _build_planar_group([idx + 1 for idx, _ in sorted(occ, key=lambda t: t[0])])
+        for _, occ in mapping.items()
+    )
+
+    template = textwrap.dedent(
+        \"\"\"\
+parameter
+    @TOPPAR:dna-rna-allatom.param
+end
+
+structure
+    @$PSF_PATH$
+end
+
+evaluate ($filename="$INPUT_PDB_PATH$")
+    coor @@$filename
+end
+
+noe
+    nres=3000
+    class all
+    @$XPLOR_NOES_PATH$
+end
+
+evaluate ($planarweight=20)
+    restraints planar @$XPLOR_PLANAR_PATH$
+{groups}
+end
+
+noe
+    ceiling=1000
+    averaging  * cent
+    potential  * square
+    sqconstant * 1.
+    sqexponent * 2
+    scale      * 50.
+end
+
+restraints
+    dihedral
+    nassign=300
+    @$XPLOR_DIHE_PATH$
+    scale=1.0
+end
+
+flags
+    exclude *
+    include bond angl cdih impr vdw noe elec plan
+end
+
+minimize
+    powell nstep=1000 nprint=100
+end
+
+evaluate ($filename="$OUTPUT_PDB_PATH$")
+    write coordinates output =$filename
+end
+
+stop
+\"\"\"
+    )
+    return template.format(groups=groups_block)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Analyse QRS string.")
     parser.add_argument("qrs", nargs="?", help="QRS string (dots and letters)")
@@ -242,6 +341,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("fitted_params.json"),
         help="Path to fitted_params.json",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["plain", "xplor"],
+        default="plain",
+        help="Output format: 'plain' (default) or 'xplor'",
     )
     return parser.parse_args()
 
@@ -252,8 +357,11 @@ def main() -> None:
     if qrs_str is None:
         qrs_str = sys.stdin.readline().rstrip("\n")
     params = load_fitted_params(args.params)
-    restraint_lines = generate_restraints(qrs_str, params)
-    print("\n".join(restraint_lines))
+    if args.format == "xplor":
+        print(generate_xplor_script(qrs_str, params))
+    else:
+        restraint_lines = generate_restraints(qrs_str, params)
+        print("\n".join(restraint_lines))
 
 
 if __name__ == "__main__":
