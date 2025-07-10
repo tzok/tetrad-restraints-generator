@@ -191,11 +191,11 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
 
             # N1-O6
             lines.append(
-                f"{r_i:>4d}  N1{r_j:>5d}  O6{mu_n1_o6:7.2f}{minus_n1_o6:7.2f}{plus_n1_o6:7.2f}"
+                f"{r_i:>4d} {'N1':>4} {r_j:>4d} {'O6':>4} {mu_n1_o6:7.2f} {minus_n1_o6:7.2f} {plus_n1_o6:7.2f}"
             )
             # N2-N7
             lines.append(
-                f"{r_i:>4d}  N2{r_j:>5d}  N7{mu_n2_n7:7.2f}{minus_n2_n7:7.2f}{plus_n2_n7:7.2f}"
+                f"{r_i:>4d} {'N2':>4} {r_j:>4d} {'N7':>4} {mu_n2_n7:7.2f} {minus_n2_n7:7.2f} {plus_n2_n7:7.2f}"
             )
     # ---------------------------- torsion block -----------------------------
     lines.append("1;1")
@@ -225,13 +225,13 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
 
             # N9 torsion
             lines.append(
-                f"{i1:>4d}  N9{i2:>5d}  N9{i3:>5d}  N9{i4:>5d}  N9 10 "
-                f"{tors_n9_loc_deg:6.2f}{tors_n9_range_deg:6.2f} 2"
+                f"{i1:>4d} {'N9':>4} {i2:>4d} {'N9':>4} {i3:>4d} {'N9':>4} {i4:>4d} {'N9':>4} "
+                f"{10.0:7.1f} {tors_n9_loc_deg:8.2f} {tors_n9_range_deg:7.2f} {tors_n9_range_deg:7.2f}"
             )
             # O6 torsion
             lines.append(
-                f"{i1:>4d}  O6{i2:>5d}  O6{i3:>5d}  O6{i4:>5d}  O6 10 "
-                f"{tors_o6_loc_deg:6.2f}{tors_o6_range_deg:6.2f} 2"
+                f"{i1:>4d} {'O6':>4} {i2:>4d} {'O6':>4} {i3:>4d} {'O6':>4} {i4:>4d} {'O6':>4} "
+                f"{10.0:7.1f} {tors_o6_loc_deg:8.2f} {tors_o6_range_deg:7.2f} {tors_o6_range_deg:7.2f}"
             )
 
     return lines
