@@ -34,7 +34,8 @@ def parse_qrs(qrs: str) -> Dict[str, List[Tuple[int, str]]]:
     Parameters
     ----------
     qrs : str
-        Input QRS string containing dots ``.`` and letters.
+        Input QRS string; only ASCII letters are analysed.
+        Any other character (dots ``.``, brackets, spaces, …) is ignored.
 
     Returns
     -------
@@ -50,7 +51,8 @@ def parse_qrs(qrs: str) -> Dict[str, List[Tuple[int, str]]]:
     mapping: Dict[str, List[Tuple[int, str]]] = {}
 
     for idx, ch in enumerate(qrs):
-        if ch == ".":
+        # Skip any placeholder that is NOT an ASCII letter (e.g. '.', brackets, spaces)
+        if not ch.isalpha():
             continue
         key = ch.lower()
         mapping.setdefault(key, []).append((idx, ch))
