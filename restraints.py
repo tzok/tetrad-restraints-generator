@@ -212,18 +212,27 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
         ordered = sorted(occurrences, key=lambda t: t[0])
         indices = [idx + 1 for idx, _ in ordered]
         order = torsion_order[classes[letter]]
-        i1, i2, i3, i4 = (indices[k] for k in order)
 
-        # N9 torsion
-        lines.append(
-            f"{i1:>4d}  N9{i2:>5d}  N9{i3:>5d}  N9{i4:>5d}  N9 10 "
-            f"{tors_n9_loc_deg:6.2f}{tors_n9_range_deg:6.2f} 2"
-        )
-        # O6 torsion
-        lines.append(
-            f"{i1:>4d}  O6{i2:>5d}  O6{i3:>5d}  O6{i4:>5d}  O6 10 "
-            f"{tors_o6_loc_deg:6.2f}{tors_o6_range_deg:6.2f} 2"
-        )
+        # Build list of torsion orders to apply.
+        # For the canonical order (0, 1, 2, 3) we additionally generate the three
+        # cyclic-rotated variants requested by the user.
+        orders_to_apply = [order]
+        if order == [0, 1, 2, 3]:
+            orders_to_apply.extend([[1, 2, 3, 0], [2, 3, 1, 0], [3, 1, 0, 2]])
+
+        for ord4 in orders_to_apply:
+            i1, i2, i3, i4 = (indices[k] for k in ord4)
+
+            # N9 torsion
+            lines.append(
+                f"{i1:>4d}  N9{i2:>5d}  N9{i3:>5d}  N9{i4:>5d}  N9 10 "
+                f"{tors_n9_loc_deg:6.2f}{tors_n9_range_deg:6.2f} 2"
+            )
+            # O6 torsion
+            lines.append(
+                f"{i1:>4d}  O6{i2:>5d}  O6{i3:>5d}  O6{i4:>5d}  O6 10 "
+                f"{tors_o6_loc_deg:6.2f}{tors_o6_range_deg:6.2f} 2"
+            )
 
     return lines
 
