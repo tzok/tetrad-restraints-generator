@@ -232,7 +232,13 @@ def generate_restraints(qrs: str, params: Dict[str, Dict[str, float]]) -> List[s
                 f"{10.0:7.1f} {tors_o6_loc_deg:8.2f} {tors_o6_range_deg:7.2f} {tors_o6_range_deg:7.2f}"
             )
 
-    return lines
+    # Split the combined list into separate distance and torsion blocks.
+    # The first "1;1" starts the distance block; the second marks the
+    # beginning of the torsion block.
+    first_sep = lines.index("1;1", 1)
+    distance_lines = lines[:first_sep]
+    torsion_lines = lines[first_sep:]
+    return distance_lines, torsion_lines, generate_xplor_script(qrs, params)
 
 
 def _build_planar_group(indices: List[int]) -> str:
@@ -345,12 +351,6 @@ def parse_args() -> argparse.Namespace:
         default=Path("fitted_params.json"),
         help="Path to fitted_params.json",
     )
-    parser.add_argument(
-        "--format",
-        choices=["plain", "xplor"],
-        default="plain",
-        help="Output format: 'plain' (default) or 'xplor'",
-    )
     return parser.parse_args()
 
 
@@ -360,11 +360,16 @@ def main() -> None:
     if qrs_str is None:
         qrs_str = sys.stdin.readline().rstrip("\n")
     params = load_fitted_params(args.params)
-    if args.format == "xplor":
-        print(generate_xplor_script(qrs_str, params))
-    else:
-        restraint_lines = generate_restraints(qrs_str, params)
-        print("\n".join(restraint_lines))
+    dist_lines, torsion_lines, xplor_script = generate_restraints(qrs_str, params)
+
+    # Print distance restraints
+    print("\n".join(dist_lines))
+    print()
+    # Print torsion restraints
+    print("\n".join(torsion_lines))
+    print()
+    # Print XPLOR planar restraints
+    print(xplor_script)
 
 
 if __name__ == "__main__":
