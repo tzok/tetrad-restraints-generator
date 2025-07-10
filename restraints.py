@@ -274,7 +274,7 @@ def generate_xplor_script(qrs: str, params: Dict[str, Dict[str, float]]) -> str:
     )
 
     template = textwrap.dedent(
-        \"\"\"\
+        """\
 parameter
     @TOPPAR:dna-rna-allatom.param
 end
@@ -328,7 +328,7 @@ evaluate ($filename="$OUTPUT_PDB_PATH$")
 end
 
 stop
-\"\"\"
+"""
     )
     return template.format(groups=groups_block)
 
